@@ -1,24 +1,40 @@
-use std::io::{self, Write};
+use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
+use serde::{Deserialize, Serialize};
+use actix_cors::Cors;
 
-fn main() {
-    let token = ask_input("Enter token: ");
-    let encrypted_user_id = ask_input("Enter encryptedUserId: ");
-    let mobile_number = ask_input("Enter mobile number: ");
-
-    let formatted = format!(" {}  userid  {}  user  {}", token, encrypted_user_id, mobile_number);
-
-    println!("\nFormatted Output:\n{}", formatted);
+#[derive(Deserialize)]
+struct InputData {
+    token: String,
+    encrypted_user_id: String,
+    mobile_number: String,
 }
 
-fn ask_input(prompt: &str) -> String {
-    print!("{}", prompt);
+#[derive(Serialize)]
+struct OutputData {
+    formatted: String,
+}
 
-    io::stdout().flush().unwrap();
+#[post("/format")]
+async fn format_data(data: web::Json<InputData>) -> impl Responder {
+    let formatted = format!(
+        " {}  userid  {}  user  {}",
+        data.token, data.encrypted_user_id, data.mobile_number
+    );
 
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read input");
+    let response = OutputData { formatted };
 
-    input.trim().to_string() 
+    HttpResponse::Ok().json(response)
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    println!("Server running at: http://127.0.0.1:8080/format");
+    HttpServer::new(|| {
+        App::new()
+         .wrap(Cors::permissive())
+            .service(format_data)
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
 }
